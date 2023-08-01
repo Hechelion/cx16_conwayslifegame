@@ -1,9 +1,9 @@
-; Title: Conway game life
+; Title: Conway game life screensaver
 ; Language: Assembly
 ; System: Commander X16
-; Version: Emulator R43
+; Version: V1.0.0 Emulator R43
 ; Author: Hechelion (hechelion@gmail.com)
-; Date: 2023-07-04
+; Date: 2023-08-01
 ; Compiler: CC65
 ; Build using:	cl65 -t cx16 -o CONWAYGL.PRG -l conwaygl.list conwaygl.asm
 
@@ -64,25 +64,17 @@ TBL_DATATEMP    = $8600
 
 .macro INC_P0
     ;Increase *P0 (16 bits)
-    lda P0_LO
-    inc
-    sta P0_LO
+    inc P0_LO
     bne :+
-    lda P0_HI
-    inc
-    sta P0_HI
+    inc P0_HI
 :   nop
 .endmacro
 
 .macro INC_P1
     ;Increase *P1 (16 bits)
-    lda P1_LO
-    inc
-    sta P1_LO
+    inc P1_LO
     bne :+
-    lda P1_HI
-    inc
-    sta P1_HI
+    inc P1_HI
 :   nop
 .endmacro
 
@@ -93,6 +85,8 @@ Tx:     .byte $00
 T0:     .byte $00
 Vel:    .byte $0A
 Pausa:  .byte $00
+Nc_lo:  .byte $00
+Demo:   .byte $01
 
 ;******************************************************************************
 ; MAIN
@@ -414,8 +408,16 @@ mainloop:
 siup:
     lda #0
     sta T0
+
+    inc Nc_lo
+    bne :+
+    lda Demo
+    cmp #1
+    bne :+
+    jsr rand_fill
+
     ;Game subrutines
-    jsr update
+:   jsr update
     jsr mov_data
     jsr game_to_vera
 noup:
@@ -431,21 +433,21 @@ keyhandler:
     sta Vel
     jmp exit
 
-:   cmp #$03                            ;key_2 (6 FPS)
+:   cmp #$03                            ;key_2 (12 FPS)
+    bne :+
+    lda #5
+    sta Vel
+    jmp exit
+
+:   cmp #$04                            ;key_3 (6 FPS)
     bne :+
     lda #10
     sta Vel
     jmp exit
 
-:   cmp #$04                            ;key_3 (2 FPS)
+:   cmp #$05                            ;key_4 (2 FPS)
     bne :+
     lda #30
-    sta Vel
-    jmp exit
-
-:   cmp #$05                            ;key_4 (1 FPS)
-    bne :+
-    lda #60
     sta Vel
     jmp exit
 
@@ -458,11 +460,28 @@ keyhandler:
     jmp exit
 
 :   cmp #$11                            ;key_Q, exit game
-    bne exit
+    bne :+
     LDX #$42                            ; System Management Controller
     LDY #$02                            ; magic location for system reset
     LDA #$00                            ; magic value for system poweroff
     JSR $FEC9                           ; power off the system
+    jmp exit
+
+:   cmp #$14                            ;Key_R Reset game
+    bne :+
+    stz Nc_lo
+    jsr rand_fill
+    jmp exit
+
+:   cmp #$21                            ;Key_R Alternate demo mode
+    bne exit
+    lda Demo
+    cmp #1
+    bne :+
+    stz Demo
+    jmp exit
+:   lda #1
+    sta Demo
     jmp exit
 
 exit:
