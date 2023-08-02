@@ -1,7 +1,7 @@
 ; Title: Conway game life screensaver
 ; Language: Assembly
 ; System: Commander X16
-; Version: V1.0.0 Emulator R43
+; Version: V1.0.1 Emulator R43
 ; Author: Hechelion (hechelion@gmail.com)
 ; Date: 2023-08-01
 ; Compiler: CC65
@@ -80,13 +80,19 @@ TBL_DATATEMP    = $8600
 
 jmp main
 
-Temp:   .byte $00
-Tx:     .byte $00
-T0:     .byte $00
-Vel:    .byte $0A
-Pausa:  .byte $00
-Nc_lo:  .byte $00
-Demo:   .byte $01
+Temp:       .byte $00
+Tx:         .byte $00
+T0:         .byte $00
+Vel:        .byte $0A
+Pausa:      .byte $00
+Nc_lo:      .byte $00
+Demo:       .byte $01
+
+Total_lo:   .byte $00
+Total_hi:   .byte $00
+Aux_lo:     .byte $00
+Aux_hi:     .byte $00
+Equaltime:  .byte $00
 
 ;******************************************************************************
 ; MAIN
@@ -277,6 +283,9 @@ cn:
 ;*******************************************************************************
 ; 1 step conway rules
 update:
+    ;reset count of total live cell
+    stz Aux_lo
+    stz Aux_hi
     ;copy first 2 rows to end of grid table
     ldx #0
 :   lda $8000,x
@@ -291,15 +300,13 @@ update:
     lda #$86
     sta P1_HI
 
-    lda #0
-    sta Tx
+    stz Tx
 
 nextfile:
     ldx #0
 next:
     ;***** Conway rules
-    lda #0
-    sta Temp                            ;Reset total neighbors lives
+    stz Temp                            ;Reset total neighbors lives
 
     ;count live neighbors
     ldy #0                              ;Up-Left cell
@@ -360,7 +367,12 @@ live:
     lda #1                              ;live cell
     sta (P1_LO)
 edl:
-    INC_P0
+    adc Aux_lo                          ;contador de total de celdas vivas
+    sta Aux_lo
+    bcc :+
+    inc Aux_hi
+
+:   INC_P0                              ;incrementamos los punteros de memoria
     INC_P1
 
     inx
@@ -375,7 +387,7 @@ edl:
     beq :+
     jmp  nextfile
 
-    ;Copy 31 row to first row
+    ;Copy #31 row to first row
 :   ldx #0
 :   lda $8A60,x
     sta $8600,x
@@ -406,12 +418,34 @@ mainloop:
     cmp Vel
     bmi noup
 siup:
-    lda #0
-    sta T0
+    stz T0                              ;Reset wait time
 
-    inc Nc_lo
+    ;compare total live cell vs total live cell for previus cycle
+    lda Aux_lo
+    cmp Total_lo
     bne :+
-    lda Demo
+    lda Aux_hi
+    cmp Total_hi
+    bne :+
+    ;If the same value, inc. Equaltime
+    inc Equaltime
+    lda Equaltime
+    cmp #10
+    bne :+
+    ;If same valur for 10 cycles, then reset game
+    stz Equaltime
+    stz Nc_lo
+    jsr rand_fill
+
+    ;Memorice the previus count of total lived cell
+:   lda Aux_lo
+    sta Total_lo
+    lda Aux_hi
+    sta Total_hi
+
+    inc Nc_lo                           ;increase cycles count
+    bne :+
+    lda Demo                            ;if Demo mode enable, set memory with random number
     cmp #1
     bne :+
     jsr rand_fill
