@@ -4,7 +4,7 @@ Conways game of life for cx16.
 >Title: Conway game life screensaver<br/>
 >Language: Assembly<br/>
 >System: Commander X16<br/>
->Version: v1.0.0 Emulator R43<br/>
+>Version: v1.0.1 Emulator R43<br/>
 >Author: Hechelion (hechelion@gmail.com)<br/>
 >Date: 2023-08-01<br/>
 >Compiler: CC65<br/>
